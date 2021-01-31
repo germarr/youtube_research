@@ -50,7 +50,8 @@ def getvideos():
             "description":i["snippet"]["description"],
             "channel_id":i["snippet"]["channelId"],
             "link":ytb_link,
-            "thumbnail":i["snippet"]["thumbnails"]["medium"]["url"]
+            "thumbnail":i["snippet"]["thumbnails"]["medium"]["url"],
+            "hour_trending":hour
         })
 
     pd.DataFrame.from_dict(top_videos).to_csv(f"./trending_videos_data/{title}.csv")
