@@ -8,34 +8,37 @@ from os import path
 c = ["AR","BR","CA","CL","CO","ES","MX","US"]
 
 ## API CALL + MERGE WITH CATEGORY ID + language
-def get_videos(country,title_v,date_new,hour):
+def getvideos(date_new,hour):
     api_key= input("API_KEY: ")
+    country_code = input("CountryCode: ")
     youtube = build("youtube","v3", developerKey=api_key)
-
+ 
     categories = []
     top_videos = []
 
     chart_mx= youtube.videos().list(
     part=["id","snippet","statistics"],
     chart="mostPopular",
-    regionCode=country,
+    regionCode=country_code,
     maxResults=50).execute()
-    
+
     category_id= youtube.videoCategories().list(
     part=["snippet"],
-    regionCode=country).execute()
+    regionCode=country_code).execute()
 
     for i in category_id["items"]:
         categories.append({
             "category_id": i["id"],
             "category_title": i["snippet"]["title"]
         })
-    
+
     for i in chart_mx["items"]:
         vid_id=i["id"]
         ytb_link=f"https://youtu.be/{vid_id}"
         tags = None
         language = None
+        likes = None
+        disLikes= None
 
         try:
             i["snippet"]["defaultAudioLanguage"]
@@ -52,6 +55,22 @@ def get_videos(country,title_v,date_new,hour):
 
         if tags!="":
             tags = i["snippet"]["tags"]
+
+        try:
+            i["statistics"]["likeCount"]
+        except KeyError:
+            likes = ""
+
+        if likes !="":
+            likes = i["statistics"]["likeCount"]
+
+        try:
+            i["statistics"]["dislikeCount"]
+        except KeyError:
+            disLikes = ""
+
+        if disLikes !="":
+            disLikes = i["statistics"]["dislikeCount"]
     
         top_videos.append({
             "published_date":i["snippet"]["publishedAt"],
@@ -61,8 +80,8 @@ def get_videos(country,title_v,date_new,hour):
             "tags":tags,
             "video_title":i["snippet"]["title"],
             "views":i["statistics"]["viewCount"], 
-            "likes":i["statistics"]["likeCount"],
-            "dislikes":i["statistics"]["dislikeCount"],
+            "likes":likes,
+            "dislikes":disLikes,
             "comments":i["statistics"].get("commentCount"),
             "description":i["snippet"]["description"],
             "channel_id":i["snippet"]["channelId"],
@@ -71,13 +90,104 @@ def get_videos(country,title_v,date_new,hour):
             "hour_trending":hour,
             "video_lang":language,
             "count": 1,
-            "country":country
+            "country":country_code
         })
 
     categories_df = pd.DataFrame.from_dict(categories)
     top_videos_df = pd.DataFrame.from_dict(top_videos)
-    df = pd.merge(top_videos_df, categories_df,on ='category_id', how ='inner').to_csv(f"trending_videos_data/{country}/0{datetime.now().month}/{title_v}/test_file.csv")
-    print("test_file.csv created!")
+
+    pandas_df = pd.merge(top_videos_df, categories_df,on ='category_id', how ='inner')
+    return pandas_df
+
+def plottopics(country_code,date_new,hour):
+    api_key= input("API_KEY: ")
+    youtube = build("youtube","v3", developerKey=api_key)
+ 
+    categories = []
+    top_videos = []
+
+    chart_mx= youtube.videos().list(
+    part=["id","snippet","statistics"],
+    chart="mostPopular",
+    regionCode=country_code,
+    maxResults=50).execute()
+
+    category_id= youtube.videoCategories().list(
+    part=["snippet"],
+    regionCode=country_code).execute()
+
+    for i in category_id["items"]:
+        categories.append({
+            "category_id": i["id"],
+            "category_title": i["snippet"]["title"]
+        })
+
+    for i in chart_mx["items"]:
+        vid_id=i["id"]
+        ytb_link=f"https://youtu.be/{vid_id}"
+        tags = None
+        language = None
+        likes = None
+        disLikes= None
+
+        try:
+            i["snippet"]["defaultAudioLanguage"]
+        except KeyError:
+            language = ""
+        
+        if language != "":
+            language = i["snippet"]["defaultAudioLanguage"]
+            
+        try:
+            i["snippet"]["tags"]
+        except KeyError:
+            tags = ""
+
+        if tags!="":
+            tags = i["snippet"]["tags"]
+
+        try:
+            i["statistics"]["likeCount"]
+        except KeyError:
+            likes = ""
+
+        if likes !="":
+            likes = i["statistics"]["likeCount"]
+
+        try:
+            i["statistics"]["dislikeCount"]
+        except KeyError:
+            disLikes = ""
+
+        if disLikes !="":
+            disLikes = i["statistics"]["dislikeCount"]
+    
+        top_videos.append({
+            "published_date":i["snippet"]["publishedAt"],
+            "trending_date":f"{date_new}T{hour}:00:00Z",
+            "category_id":i["snippet"]["categoryId"],
+            "channel_title":i["snippet"]["channelTitle"],
+            "tags":tags,
+            "video_title":i["snippet"]["title"],
+            "views":i["statistics"]["viewCount"], 
+            "likes":likes,
+            "dislikes":disLikes,
+            "comments":i["statistics"].get("commentCount"),
+            "description":i["snippet"]["description"],
+            "channel_id":i["snippet"]["channelId"],
+            "link":ytb_link,
+            "thumbnail":i["snippet"]["thumbnails"]["medium"]["url"],
+            "hour_trending":hour,
+            "video_lang":language,
+            "count": 1,
+            "country":country_code
+        })
+
+    categories_df = pd.DataFrame.from_dict(categories)
+    top_videos_df = pd.DataFrame.from_dict(top_videos)
+
+    pandas_df = pd.merge(top_videos_df, categories_df,on ='category_id', how ='inner')
+    return pandas_df
 
 
 
